@@ -45,32 +45,36 @@ const HeroSlider = () => {
 
   return (
     <section className="container-fixed mt-6">
-      <div className="grid gap-4 rounded-xl bg-gradient-to-r from-green-500 to-green-600 p-4 text-white shadow-sm sm:grid-cols-[1fr_1fr] sm:p-5">
-        <div className="flex flex-col justify-center gap-2 sm:pr-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-green-100">Aman-Store</p>
-          <h2 className="text-xl font-semibold sm:text-2xl">{activeSlide.title}</h2>
-          <p className="text-xs text-green-50 sm:text-sm">{activeSlide.subtitle}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <Link
-              to={`/search?q=${encodeURIComponent(activeSlide.query)}`}
-              className="rounded-xl bg-white px-4 py-2 text-xs font-semibold text-green-700"
-            >
-              Shop Now
-            </Link>
-            <Link
-              to="/category/all"
-              className="rounded-xl bg-white/15 px-4 py-2 text-xs font-semibold text-white"
-            >
-              View All
-            </Link>
-          </div>
-        </div>
-
+      <div className="relative overflow-hidden rounded-xl shadow-sm">
         <img
           src={activeSlide.image}
           alt={activeSlide.title}
-          className="h-36 w-full rounded-xl object-cover sm:h-40 lg:h-44"
+          className="h-56 w-full object-cover sm:h-64 lg:h-72"
         />
+
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
+
+        <div className="absolute inset-0 flex items-center px-4 sm:px-6">
+          <div className="max-w-md text-white">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-green-100">Aman-Store</p>
+            <h2 className="mt-2 text-2xl font-semibold sm:text-3xl">{activeSlide.title}</h2>
+            <p className="mt-2 text-xs text-green-50 sm:text-sm">{activeSlide.subtitle}</p>
+            <div className="mt-4 flex items-center gap-2">
+              <Link
+                to={`/search?q=${encodeURIComponent(activeSlide.query)}`}
+                className="rounded-xl bg-white px-4 py-2 text-xs font-semibold text-green-700"
+              >
+                Shop Now
+              </Link>
+              <Link
+                to="/category/all"
+                className="rounded-xl bg-white/20 px-4 py-2 text-xs font-semibold text-white"
+              >
+                View All
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-2 flex justify-center gap-2">
