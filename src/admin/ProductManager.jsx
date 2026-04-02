@@ -51,24 +51,33 @@ const ProductManager = () => {
     setLoading(true);
     setStatus('');
 
-    const imageUrl = file ? await uploadImage(file, 'product-images') : form.image;
-    const payload = {
-      name: form.name.trim(),
-      category: form.category.trim() || 'General',
+    try {
+      const imageUrl = file ? await uploadImage(file, 'product-images') : form.image;
+      const payload = {
+        name: form.name.trim(),
+        category: form.category.trim() || 'General',
         size: form.size.trim() || '',
-    };
+        price: Number(form.price) || 0,
+        discount: Number(form.discount) || 0,
+        image: imageUrl || form.image || '',
+      };
 
-    if (editingId) {
-      await productApi.update(editingId, payload);
-      setStatus('Product updated.');
-    } else {
-      await productApi.create(payload);
-      setStatus('Product added.');
+      if (editingId) {
+        await productApi.update(editingId, payload);
+        setStatus('Product updated.');
+      } else {
+        await productApi.create(payload);
+        setStatus('Product added.');
+      }
+
+      await loadData();
+      resetForm();
+    } catch (error) {
+      console.error('Product save failed:', error);
+      setStatus('Unable to save product. Please try again.');
+    } finally {
+      setLoading(false);
     }
-
-    await loadData();
-    resetForm();
-    setLoading(false);
   };
   // submit handler
 

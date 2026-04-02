@@ -2,24 +2,41 @@
 import { getCurrentUser, onAuthStateChange } from '../lib/auth.js';
 import { usersApi } from '../lib/shopApi.js';
 
+let cachedUser = null;
+let currentUserPromise = null;
+
+const enrichUser = async (baseUser) => {
+  if (!baseUser?.email) return baseUser;
+  const profile = await usersApi.getByEmail(baseUser.email);
+  return { ...baseUser, ...(profile || {}) };
+};
+
+const loadCurrentUser = async () => {
+  if (currentUserPromise) {
+    return currentUserPromise;
+  }
+
+  currentUserPromise = (async () => {
+    const currentUser = await getCurrentUser();
+    const merged = await enrichUser(currentUser);
+    cachedUser = merged;
+    currentUserPromise = null;
+    return merged;
+  })();
+
+  return currentUserPromise;
+};
+
 const useCurrentUser = () => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(cachedUser);
+  const [loading, setLoading] = useState(!cachedUser);
   const [error, setError] = useState('');
   // state
-
-  const enrichUser = async (baseUser) => {
-    if (!baseUser?.email) return baseUser;
-    const profile = await usersApi.getByEmail(baseUser.email);
-    return { ...baseUser, ...(profile || {}) };
-  };
-  // merge profile
 
   const refresh = async () => {
     try {
       setError('');
-      const currentUser = await getCurrentUser();
-      const merged = await enrichUser(currentUser);
+      const merged = await loadCurrentUser();
       setUser(merged);
       setLoading(false);
       return merged;
@@ -37,8 +54,7 @@ const useCurrentUser = () => {
     const syncUser = async () => {
       try {
         setError('');
-        const currentUser = await getCurrentUser();
-        const merged = await enrichUser(currentUser);
+        const merged = await loadCurrentUser();
         if (active) {
           setUser(merged);
           setLoading(false);
@@ -55,6 +71,7 @@ const useCurrentUser = () => {
 
     const subscription = onAuthStateChange(async (currentUser) => {
       const merged = await enrichUser(currentUser);
+      cachedUser = merged;
       if (active) {
         setUser(merged);
         setLoading(false);
