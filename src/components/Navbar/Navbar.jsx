@@ -16,6 +16,7 @@ const Navbar = () => {
   const { logo } = logoStore;
   const { isDark, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const menuRef = useRef(null);
   // ui state
 
@@ -41,6 +42,15 @@ const Navbar = () => {
       document.removeEventListener('touchstart', handleOutsideClick);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   const handleLogout = async () => {
     await clearCurrentUser();
@@ -86,6 +96,18 @@ const Navbar = () => {
               </span>
             )}
           </Link>
+
+          {deferredPrompt && (
+            <button
+              onClick={() => {
+                deferredPrompt.prompt();
+                setDeferredPrompt(null);
+              }}
+              className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+            >
+              Install App
+            </button>
+          )}
 
           {user ? (
             <button

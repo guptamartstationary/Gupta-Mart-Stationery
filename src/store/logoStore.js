@@ -26,4 +26,4 @@ const useLogoStore = create((set, get) => ({
 }));
 
 export default useLogoStore;
-useLogoStore.fetchLogo();
+
