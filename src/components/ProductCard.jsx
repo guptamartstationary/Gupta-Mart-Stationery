@@ -35,8 +35,7 @@ const ProductCard = memo(({ product, onAdd }) => {
         <p className="text-[10px] font-semibold uppercase text-green-600">{product.category}</p>
         <Link to={`/product/${product.id}`} className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
           {product.name}
-        </Link>
-        <div className="mt-2 flex items-center gap-2">
+        </Link>        {product.size && <p className="mt-2 text-sm text-slate-500">{product.size}</p>}        <div className="mt-2 flex items-center gap-2">
           <p className="text-base font-bold text-green-700">{formatCurrency(finalPrice)}</p>
           {hasDiscount && (
             <p className="text-xs text-slate-400 line-through">{formatCurrency(product.price)}</p>

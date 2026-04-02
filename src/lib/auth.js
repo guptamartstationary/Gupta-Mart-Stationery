@@ -180,6 +180,27 @@ export const signUpWithPassword = async (email, password, options = {}) => {
 };
 // sign up
 
+export const signInWithGoogle = async () => {
+  if (supabase) {
+    return supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
+      },
+    });
+  }
+
+  const localUser = normalizeUser({
+    id: 'local-google-user',
+    email: 'google.user@local.dev',
+    displayName: 'Google User',
+    username: 'google-user',
+  });
+  setStoredUser(localUser);
+  return { data: { user: localUser } };
+};
+// google auth
+
 export const updateCurrentUserProfile = async ({ displayName, username }) => {
   if (supabase) {
     const response = await supabase.auth.updateUser({

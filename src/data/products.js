@@ -5,6 +5,7 @@
     category: 'Grains',
     price: 160,
     discount: 25,
+    size: '1kg',
     image: 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -13,6 +14,7 @@
     category: 'Grains',
     price: 110,
     discount: 15,
+    size: '5kg',
     image: 'https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -21,6 +23,7 @@
     category: 'Household',
     price: 240,
     discount: 10,
+    size: '1L',
     image: 'https://images.unsplash.com/photo-1582515073490-39981321e3c5?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -29,6 +32,7 @@
     category: 'Household',
     price: 70,
     discount: 5,
+    size: '1kg',
     image: 'https://images.unsplash.com/photo-1608657685390-6ea1b2b8d342?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -37,6 +41,7 @@
     category: 'Snacks',
     price: 40,
     discount: 0,
+    size: '2-pack',
     image: 'https://images.unsplash.com/photo-1585386959984-a415522255d7?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -45,6 +50,7 @@
     category: 'Snacks',
     price: 55,
     discount: 12,
+    size: '200g',
     image: 'https://images.unsplash.com/photo-1599785209707-7fb97f7625b5?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -53,6 +59,7 @@
     category: 'Beverages',
     price: 120,
     discount: 20,
+    size: '250g',
     image: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=500&q=80',
   },
   {
@@ -61,6 +68,7 @@
     category: 'Household',
     price: 35,
     discount: 0,
+    size: '100g',
     image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=500&q=80',
   },
 ];

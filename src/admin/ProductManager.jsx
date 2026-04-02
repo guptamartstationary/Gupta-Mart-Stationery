@@ -6,6 +6,7 @@ import { formatCurrency, getDiscountedPrice } from '../lib/pricing.js';
 const emptyForm = {
   name: '',
   category: '',
+  size: '',
   price: '',
   discount: '0',
   image: '',
@@ -54,9 +55,7 @@ const ProductManager = () => {
     const payload = {
       name: form.name.trim(),
       category: form.category.trim() || 'General',
-      price: Number(form.price) || 0,
-      discount: Number(form.discount) || 0,
-      image: imageUrl || form.image,
+        size: form.size.trim() || '',
     };
 
     if (editingId) {
@@ -78,6 +77,7 @@ const ProductManager = () => {
     setForm({
       name: product.name,
       category: product.category,
+      size: product.size || '',
       price: product.price,
       discount: product.discount,
       image: product.image,
@@ -118,6 +118,21 @@ const ProductManager = () => {
                 {item.name}
               </option>
             ))}
+          </select>
+
+          <select
+            value={form.size}
+            onChange={(event) => setForm({ ...form, size: event.target.value })}
+            className="h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
+            <option value="">Select size</option>
+            <option value="250g">250g</option>
+            <option value="500g">500g</option>
+            <option value="1kg">1kg</option>
+            <option value="2kg">2kg</option>
+            <option value="500ml">500ml</option>
+            <option value="1L">1L</option>
+            <option value="2L">2L</option>
           </select>
 
           <div className="grid gap-4 sm:grid-cols-2">

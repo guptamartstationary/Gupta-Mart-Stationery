@@ -64,6 +64,7 @@ const normalizeProduct = (item = {}) => {
   return {
     id: item.id || createId(),
     name: item.name || 'Kirana Item',
+    size: item.size || '',
     price,
     discount,
     image: item.image || '',
