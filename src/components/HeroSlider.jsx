@@ -52,7 +52,7 @@ const HeroSlider = () => {
           className="h-56 w-full object-cover sm:h-64 lg:h-72"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/25 to-transparent" />
 
         <div className="absolute inset-0 flex items-center px-4 sm:px-6">
           <div className="max-w-md text-white">
@@ -96,3 +96,4 @@ const HeroSlider = () => {
 // hero slider
 
 export default HeroSlider;
+

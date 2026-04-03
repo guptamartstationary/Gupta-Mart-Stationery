@@ -11,7 +11,7 @@ import SearchBar from '../SearchBar.jsx';
 const Navbar = () => {
   const navigate = useNavigate();
   const { cart } = useCartStore();
-  const { user } = useCurrentUser();
+  const { user, profile } = useCurrentUser();
   const logoStore = useLogoStore();
   const { logo } = logoStore;
   const { isDark, toggleTheme } = useTheme();
@@ -71,7 +71,7 @@ const Navbar = () => {
           <span className="text-lg font-bold text-green-700 dark:text-green-400 hidden md:inline">Store</span>
         </Link>
 
-        <div className="order-3 w-full md:order-none md:flex-1">
+        <div className="order-3 w-full md:order-0 md:flex-1">
           <SearchBar className="w-full" />
         </div>
 
@@ -110,12 +110,20 @@ const Navbar = () => {
           )}
 
           {user ? (
-            <button
-              onClick={handleLogout}
-              className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
-            >
-              Logout
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <div className="text-xs text-slate-500">
+                {user.email}
+              </div>
+              <div className="text-xs text-slate-500">
+                {user.profile?.name || user.user_metadata?.name || user.user_metadata?.display_name || 'No name'}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                Logout
+              </button>
+            </div>
           ) : (
             <Link
               to="/login"
@@ -185,3 +193,4 @@ const Navbar = () => {
 // navbar ui
 
 export default Navbar;
+

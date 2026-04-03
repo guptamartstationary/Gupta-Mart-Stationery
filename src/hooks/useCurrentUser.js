@@ -1,96 +1,52 @@
-﻿import { useEffect, useState } from 'react';
-import { getCurrentUser, onAuthStateChange } from '../lib/auth.js';
-import { usersApi } from '../lib/shopApi.js';
-
-let cachedUser = null;
-let currentUserPromise = null;
-
-const enrichUser = async (baseUser) => {
-  if (!baseUser?.email) return baseUser;
-  let profile;
-  if (baseUser.googleId) {
-    profile = await usersApi.getByGoogleId(baseUser.googleId);
-  } else {
-    profile = await usersApi.getByEmail(baseUser.email);
-  }
-  return { ...baseUser, ...(profile || {}) };
-};
-
-const loadCurrentUser = async () => {
-  if (currentUserPromise) {
-    return currentUserPromise;
-  }
-
-  currentUserPromise = (async () => {
-    const currentUser = await getCurrentUser();
-    const merged = await enrichUser(currentUser);
-    cachedUser = merged;
-    currentUserPromise = null;
-    return merged;
-  })();
-
-  return currentUserPromise;
-};
+﻿import { useEffect, useState } from "react"
+import { supabase } from "../lib/supabase"
+import { getProfile } from "../lib/auth"
 
 const useCurrentUser = () => {
-  const [user, setUser] = useState(cachedUser);
-  const [loading, setLoading] = useState(!cachedUser);
-  const [error, setError] = useState('');
-  // state
-
-  const refresh = async () => {
-    try {
-      setError('');
-      const merged = await loadCurrentUser();
-      setUser(merged);
-      setLoading(false);
-      return merged;
-    } catch (err) {
-      setError(err?.message || 'Failed to fetch user');
-      setLoading(false);
-      return null;
-    }
-  };
-  // manual refresh
+  const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let active = true;
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser()
+      
+      const currentUser = data?.user || null
+      setUser(currentUser)
+      
+      if (currentUser?.id) {
+        const prof = await getProfile(currentUser.id)
+        setProfile(prof)
+      } else {
+        setProfile(null)
+      }
+      
+      setLoading(false)
+    }
 
-    const syncUser = async () => {
-      try {
-        setError('');
-        const merged = await loadCurrentUser();
-        if (active) {
-          setUser(merged);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err?.message || 'Failed to sync user');
-          setLoading(false);
+    getUser()
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const currentUser = session?.user || null
+        setUser(currentUser)
+        
+        if (currentUser?.id) {
+          const prof = await getProfile(currentUser.id)
+          setProfile(prof)
+        } else {
+          setProfile(null)
         }
       }
-    };
-
-    syncUser();
-
-    const subscription = onAuthStateChange(async (currentUser) => {
-      const merged = await enrichUser(currentUser);
-      cachedUser = merged;
-      if (active) {
-        setUser(merged);
-        setLoading(false);
-      }
-    });
+    )
 
     return () => {
-      active = false;
-      subscription?.unsubscribe?.();
-    };
-  }, []);
+      listener.subscription.unsubscribe()
+    }
+  }, [])
 
-  return { user, loading, error, refresh };
-};
-// hook
+  return { user, profile, loading }
+}
 
 export default useCurrentUser;
+

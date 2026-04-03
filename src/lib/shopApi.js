@@ -1,130 +1,18 @@
-﻿import { supabase, hasSupabaseConfig } from './supabase';
-import fallbackProducts from '../data/products';
+﻿import { supabase } from './supabase';
 
-let useSupabase = hasSupabaseConfig;
-const userProfilesCache = new Map();
-const userProfilesPromiseCache = new Map();
+const normalizeProduct = (item = {}) => ({
+  id: item.id,
+  name: item.name,
+  size: item.pack_size || item.size || '',
+  price: Number(item.original_price || item.final_price || item.price) || 0,
+  discount: Number(item.discount_percent || item.discount) || 0,
+  image: item.image_url || item.image || '',
+  category: item.category || item.tag || 'General',
+  stock: Number(item.stock) || 0,
+  unit: item.unit || 'kg',
+});
 
-const PRODUCT_KEY = 'kirana-products';
-const CATEGORY_KEY = 'kirana-categories';
-const BANNER_KEY = 'kirana-banners';
-const ORDER_KEY = 'kirana-orders';
-const USER_KEY = 'kirana-users';
-// storage keys
 
-const defaultCategories = [
-  { id: 'cat-grains', name: 'Grains', image: 'https://images.unsplash.com/photo-1516685018646-549d2be9ef9b?auto=format&fit=crop&w=600&q=80' },
-  { id: 'cat-snacks', name: 'Snacks', image: 'https://images.unsplash.com/photo-1604909052743-83e1f8b1f4cb?auto=format&fit=crop&w=600&q=80' },
-  { id: 'cat-beverages', name: 'Beverages', image: 'https://images.unsplash.com/photo-1510626176961-4b57d4fbad04?auto=format&fit=crop&w=600&q=80' },
-  { id: 'cat-household', name: 'Household', image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80' },
-];
-
-const defaultBanners = [
-  {
-    id: 'banner-1',
-    title: 'Seasonal Staples',
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-    link: '/search?q=staples',
-  },
-];
-// defaults
-
-const createId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const readLocal = (key, fallback = []) => {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const stored = JSON.parse(window.localStorage.getItem(key));
-    return Array.isArray(stored) ? stored : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const disableSupabase = () => {
-  useSupabase = false;
-};
-
-const safeSupabase = async (callback) => {
-  if (!useSupabase || !supabase) return null;
-
-  try {
-    const result = await callback();
-    if (result?.error) {
-      console.warn('Supabase request failed, switching to local fallback.', result.error);
-      disableSupabase();
-      return null;
-    }
-
-    return result;
-  } catch (error) {
-    console.warn('Supabase request threw, switching to local fallback.', error);
-    disableSupabase();
-    return null;
-  }
-};
-
-const writeLocal = (key, value) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore
-  }
-};
-// local storage helpers
-
-const normalizeProduct = (item = {}) => {
-  const price = Number(item.price ?? item.original_price) || 0;
-  let discount = Number(item.discount ?? item.discount_percent) || 0;
-
-  if (!discount && item.discount_price && price) {
-    const legacyDiscount = Math.round((1 - Number(item.discount_price) / price) * 100);
-    discount = Number.isFinite(legacyDiscount) ? legacyDiscount : 0;
-  }
-
-  const image = item.image || item.image_url || '';
-  const size = item.size || item.pack_size || '';
-  const category = item.category || item.tag || 'General';
-
-  return {
-    id: item.id || createId(),
-    name: item.name || 'Kirana Item',
-    size,
-    price,
-    discount,
-    image,
-    category,
-    stock: Number(item.stock) || 100,
-    unit: item.unit || 'kg',
-  };
-};
-
-const buildSupabaseProductRow = (payload = {}) => {
-  const price = Number(payload.price ?? payload.original_price) || 0;
-  const discount = Number(payload.discount ?? payload.discount_percent) || 0;
-  const finalPrice = Number(payload.final_price) || Math.max(0, price - (price * discount) / 100);
-
-  return {
-    name: payload.name || '',
-    category: payload.category || 'General',
-    image_url: payload.image || payload.image_url || '',
-    original_price: price,
-    discount_price: payload.discount_price ?? null,
-    discount_percent: discount,
-    final_price: finalPrice,
-    pack_size: payload.size || payload.pack_size || '',
-    tag: payload.tag || 'trending',
-    stock: Number(payload.stock) || 100,
-    unit: payload.unit || 'kg',
-    created_at: payload.created_at || new Date().toISOString(),
-  };
-};
 
 const normalizeCategory = (item = {}) => ({
   id: item.id || createId(),

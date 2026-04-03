@@ -8,7 +8,7 @@ import { OrderSkeleton } from '../components/Skeletons.jsx';
 const steps = ['pending', 'approved', 'out_for_delivery', 'delivered'];
 
 const Orders = () => {
-  const { user } = useCurrentUser();
+const { user, profile } = useCurrentUser();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   // data hooks
@@ -101,11 +101,17 @@ const Orders = () => {
   return (
     <div className="min-h-screen bg-white pb-20 dark:bg-slate-950">
       <div className="container-fixed py-10 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-0">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-green-600">Orders</p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">Your orders</h1>
           </div>
+          {user && (
+            <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+              <p><strong>Email:</strong> {user.email}</p>
+{user.profile?.name || user.user_metadata?.name || user.user_metadata?.display_name || 'No name set'}
+            </div>
+          )}
           {!user?.email && (
             <Link to="/login" className="text-sm font-semibold text-green-700">
               Login

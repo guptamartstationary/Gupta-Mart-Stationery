@@ -1,4 +1,5 @@
 ﻿import { useMemo } from 'react';
+import useCurrentUser from '../hooks/useCurrentUser.js';
 import { Link } from 'react-router-dom';
 import useProducts from '../hooks/useProducts.js';
 import useCategories from '../hooks/useCategories.js';
@@ -9,6 +10,7 @@ import CategoryCard from '../components/CategoryCard.jsx';
 import { ProductCardSkeleton, CategorySkeleton } from '../components/Skeletons.jsx';
 
 const Home = () => {
+  const { user } = useCurrentUser();
   const { products, loading } = useProducts();
   const { categories, loading: categoryLoading } = useCategories();
   const addToCart = useCartStore((state) => state.addToCart);
@@ -24,7 +26,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white pb-20 dark:bg-slate-950">
-      <HeroSlider />
+{user ? (
+  <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-xl border border-green-200 dark:border-green-800 mx-4 lg:mx-0 mb-6">
+    <p className="text-sm text-slate-600 dark:text-slate-300">
+      Logged in as: <strong>{user.email}</strong> | 
+      {user.user_metadata?.name && ` ${user.user_metadata.name}`}
+    </p>
+  </div>
+) : null}
+<HeroSlider />
 
       <section className="container-fixed mt-8">
         <div className="flex items-center justify-between">
