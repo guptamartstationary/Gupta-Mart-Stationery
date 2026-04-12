@@ -1,22 +1,19 @@
 ﻿import { useEffect, useState } from 'react';
 import { bannerApi, uploadImage, settingsApi } from '../lib/shopApi.js';
 
-const [logoUrl, setLogoUrl] = useState('');
-const [logoSaving, setLogoSaving] = useState(false);
-
 const emptyForm = { title: '', link: '' };
 
 const BannerManager = () => {
   const [banners, setBanners] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
-  // state
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoSaving, setLogoSaving] = useState(false);
 
   const loadBanners = async () => {
     const data = await bannerApi.getAll();
     setBanners(data || []);
   };
-  // load banners
 
   useEffect(() => {
     loadBanners();
@@ -47,7 +44,6 @@ const BannerManager = () => {
       setLogoSaving(false);
     }
   };
-  // init
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -64,15 +60,12 @@ const BannerManager = () => {
     setForm(emptyForm);
     setFile(null);
   };
-  // submit handler
 
   const handleDelete = async (id) => {
     await bannerApi.remove(id);
     setBanners((prev) => prev.filter((item) => item.id !== id));
   };
-  // delete handler
 
-  // ui
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
       <div className="space-y-8">
@@ -90,7 +83,7 @@ const BannerManager = () => {
             onChange={handleLogoUpload}
             className="mt-2 w-full text-sm"
           />
-          <button 
+          <button
             type="button"
             onClick={handleLogoSave}
             disabled={logoSaving}

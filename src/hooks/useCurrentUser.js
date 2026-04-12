@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { getProfile } from "../lib/auth";
+import { getProfile } from "../lib/auth.js";
 
 const ADMIN_EMAIL = "Guptamartstationary911@gmail.com";
-
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
 
 const useCurrentUser = () => {
@@ -17,17 +16,15 @@ const useCurrentUser = () => {
 
     const setProfileForUser = async (userId) => {
       if (!isActive) return;
-
       if (!userId) {
         setProfile(null);
         return;
       }
-
       try {
         const prof = await getProfile(userId);
         if (!isActive) return;
         setProfile(prof || null);
-      } catch (error) {
+      } catch {
         if (!isActive) return;
         setProfile(null);
       }
@@ -35,7 +32,6 @@ const useCurrentUser = () => {
 
     const applySessionState = async (nextSession) => {
       if (!isActive) return;
-
       const currentUser = nextSession?.user || null;
       setSession(nextSession || null);
       const userWithRole = currentUser ? {
@@ -52,9 +48,7 @@ const useCurrentUser = () => {
       setUser(null);
       setProfile(null);
       setLoading(false);
-      return () => {
-        isActive = false;
-      };
+      return () => { isActive = false; };
     }
 
     const loadingTimeoutId = setTimeout(() => {
@@ -66,6 +60,7 @@ const useCurrentUser = () => {
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
+          console.error('Session error:', sessionError);
         }
 
         let activeSession = sessionData?.session || null;
@@ -75,6 +70,7 @@ const useCurrentUser = () => {
           if (authCode) {
             const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(authCode);
             if (exchangeError) {
+              console.error('Exchange error:', exchangeError);
             } else {
               activeSession = exchangeData?.session || null;
             }
@@ -86,6 +82,7 @@ const useCurrentUser = () => {
         } else {
           const { data: userData, error: userError } = await supabase.auth.getUser();
           if (userError) {
+            console.error('User error:', userError);
           }
           const currentUser = userData?.user || null;
           setSession(null);
@@ -93,7 +90,7 @@ const useCurrentUser = () => {
           setLoading(false);
           await setProfileForUser(currentUser?.id || null);
         }
-      } catch (error) {
+      } catch {
         if (!isActive) return;
         setSession(null);
         setUser(null);
@@ -113,7 +110,7 @@ const useCurrentUser = () => {
     return () => {
       isActive = false;
       clearTimeout(loadingTimeoutId);
-      listener?.subscription?.unsubscribe();
+      listener?.subscription?.unsubscribe?.();
     };
   }, []);
 
