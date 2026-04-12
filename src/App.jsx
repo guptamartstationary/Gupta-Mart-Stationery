@@ -55,6 +55,7 @@ const App = () => {
           <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route

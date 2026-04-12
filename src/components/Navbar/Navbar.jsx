@@ -53,8 +53,12 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async () => {
-    await clearCurrentUser();
-    navigate('/login');
+    try {
+      await clearCurrentUser();
+      navigate('/login');
+    } catch (error) {
+      console.error('[auth] Logout failed', error);
+    }
   };
   // actions
 
@@ -64,11 +68,10 @@ const Navbar = () => {
         <Link to="/" className="flex items-center gap-2">
           <img 
             src={logo} 
-            alt="Aman Store" 
-            className="h-8 w-auto object-contain"
-            onError={(e) => e.currentTarget.src = '/favicon.svg'}
+            alt="Gupta Mart & Stationery" 
+            className="h-10 w-auto object-contain"
+            onError={(e) => e.currentTarget.src = '/Logo/Applogo.png'}
           />
-          <span className="text-lg font-bold text-green-700 dark:text-green-400 hidden md:inline">Store</span>
         </Link>
 
         <div className="order-3 w-full md:order-0 md:flex-1">
@@ -110,20 +113,12 @@ const Navbar = () => {
           )}
 
           {user ? (
-            <div className="flex flex-col items-end gap-1">
-              <div className="text-xs text-slate-500">
-                {user.email}
-              </div>
-              <div className="text-xs text-slate-500">
-                {user.profile?.name || user.user_metadata?.name || user.user_metadata?.display_name || 'No name'}
-              </div>
-              <button
-                onClick={handleLogout}
-                className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+            >
+              Logout
+            </button>
           ) : (
             <Link
               to="/login"
@@ -166,8 +161,8 @@ const Navbar = () => {
                 >
                   Orders
                 </Link>
-                <Link
-                  to={user ? '/orders' : '/login'}
+                  <Link
+                  to="/account"
                   onClick={() => setMenuOpen(false)}
                   className="block rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                 >

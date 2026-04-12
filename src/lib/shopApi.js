@@ -389,9 +389,9 @@ export const settingsApi = {
     if (useSupabase && supabase) {
       const supabaseResponse = await safeSupabase(() => supabase.from('settings').select('app_logo').maybeSingle());
       const data = supabaseResponse?.data;
-      return data?.app_logo || '/favicon.svg';
+      return data?.app_logo || '/Logo/Applogo.png';
     }
-    return '/favicon.svg';
+    return '/Logo/Applogo.png';
   },
   updateAppLogo: async (url) => {
     if (useSupabase && supabase) {

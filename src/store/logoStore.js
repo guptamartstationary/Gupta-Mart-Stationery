@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { settingsApi } from '../lib/shopApi.js';
 
 const useLogoStore = create((set, get) => ({
-  logo: '/favicon.svg',
+  logo: '/Logo/Applogo.png',
   loading: false,
 
   fetchLogo: async () => {
@@ -13,7 +13,7 @@ const useLogoStore = create((set, get) => ({
       const logo = await settingsApi.getAppLogo();
       set({ logo });
     } catch {
-      set({ logo: '/favicon.svg' });
+      set({ logo: '/Logo/Applogo.png' });
     } finally {
       set({ loading: false });
     }

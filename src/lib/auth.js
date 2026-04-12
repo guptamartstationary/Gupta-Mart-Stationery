@@ -2,6 +2,7 @@
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
+
 export const getProfile = async (userId) => {
   if (!supabase || !userId) return null;
   const { data, error } = await supabase
@@ -50,14 +51,16 @@ const normalizeUser = async (authUser) => {
 export const getCurrentUser = async () => {
   if (!supabase) throw new Error('Supabase not configured');
   const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return await normalizeUser(data?.user);
 };
 
 export const onAuthStateChange = (callback) => {
   if (!supabase) throw new Error('Supabase not configured');
-  return supabase.auth.onAuthStateChange(async (_event, session) => {
-    callback(await normalizeUser(session?.user || null));
+  return supabase.auth.onAuthStateChange((event, session) => {
+    callback(normalizeUser(session?.user || null));
   });
 };
 
@@ -65,7 +68,17 @@ export const signInWithPassword = async (email, password, profile = {}) => {
   const normalizedEmail = normalizeEmail(email);
 
   if (supabase) {
-    return supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+    const response = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+
+    if (response.error) {
+      return response;
+    }
+
+    const { data: persistedSessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+    } 
+
+    return response;
   }
 
   if (!normalizedEmail || !password) {
@@ -111,15 +124,39 @@ export const signUpWithPassword = async (email, password, options = {}) => {
 
 export const signInWithGoogle = async () => {
   if (supabase) {
-    return supabase.auth.signInWithOAuth({
+    const redirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
+
+    const response = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
+        redirectTo,
       },
     });
+
+    return response;
   }
 
   throw new Error('Supabase not configured - add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+};
+
+import { usersApi } from './shopApi.js';
+
+export const upsertGoogleUser = async (authUser) => {
+  const normalized = await normalizeUser(authUser);
+  if (!normalized) return null;
+
+  const userData = {
+    id: normalized.id,
+    email: normalized.email,
+    googleId: normalized.googleId,
+    name: normalized.name,
+    phone: normalized.phone || '',
+    address: normalized.address || '',
+    location: normalized.location || '',
+  };
+
+  return await usersApi.upsert(userData);
 };
 
 export const updateCurrentUserProfile = async ({ displayName, username, ...profileUpdates }) => {
@@ -145,7 +182,12 @@ export const updateCurrentUserProfile = async ({ displayName, username, ...profi
 
 export const clearCurrentUser = async () => {
   if (supabase) {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+    return { data: true };
   }
+  throw new Error('Supabase not configured - add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
 };
 
