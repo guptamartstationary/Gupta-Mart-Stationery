@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getProfile } from "../lib/auth.js";
 
-const ADMIN_EMAIL = "Guptamartstationary911@gmail.com";
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 8000;
+const ADMIN_EMAIL = "guptamartstationary911@gmail.com";
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 2000;
 
 const useCurrentUser = () => {
   const [user, setUser] = useState(null);
@@ -16,10 +16,7 @@ const useCurrentUser = () => {
 
     const setProfileForUser = async (userId) => {
       if (!isActive) return;
-      if (!userId) {
-        setProfile(null);
-        return;
-      }
+      if (!userId) { setProfile(null); return; }
       try {
         const prof = await getProfile(userId);
         if (!isActive) return;
@@ -36,7 +33,7 @@ const useCurrentUser = () => {
       setSession(nextSession || null);
       const userWithRole = currentUser ? {
         ...currentUser,
-        role: currentUser.email === ADMIN_EMAIL ? 'admin' : 'user'
+        role: currentUser.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'user'
       } : null;
       setUser(userWithRole);
       setLoading(false);
@@ -59,9 +56,7 @@ const useCurrentUser = () => {
     const initializeAuth = async () => {
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-        }
+        if (sessionError) console.error('Session error:', sessionError);
 
         let activeSession = sessionData?.session || null;
 
@@ -81,12 +76,14 @@ const useCurrentUser = () => {
           await applySessionState(activeSession);
         } else {
           const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userError) {
-            console.error('User error:', userError);
-          }
+          if (userError) console.error('User error:', userError);
           const currentUser = userData?.user || null;
+          const userWithRole = currentUser ? {
+            ...currentUser,
+            role: currentUser.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'user'
+          } : null;
           setSession(null);
-          setUser(currentUser);
+          setUser(userWithRole);
           setLoading(false);
           await setProfileForUser(currentUser?.id || null);
         }
