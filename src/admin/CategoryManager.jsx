@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { categoryApi } from '../lib/shopApi.js';
+import { categoryApi, uploadImage } from '../lib/shopApi.js';
 
 const emptyForm = { name: '', image: '' };
 
@@ -7,6 +7,9 @@ const CategoryManager = () => {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState('');
+  const [loading, setLoading] = useState(false);
   // state
 
   const loadCategories = async () => {
@@ -20,29 +23,45 @@ const CategoryManager = () => {
   }, []);
   // init
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    const payload = {
-      name: form.name.trim(),
-      image: form.image.trim(),
-    };
-
-    if (editingId) {
-      await categoryApi.update(editingId, payload);
-    } else {
-      await categoryApi.create(payload);
-    }
-
-    await loadCategories();
+  const resetForm = () => {
     setForm(emptyForm);
     setEditingId(null);
+    setImageFile(null);
+    setPreview('');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+
+    try {
+      const imageUrl = imageFile ? await uploadImage(imageFile, 'categories') : form.image;
+      const payload = {
+        name: form.name.trim(),
+        image: imageUrl,
+      };
+
+      if (editingId) {
+        await categoryApi.update(editingId, payload);
+      } else {
+        await categoryApi.create(payload);
+      }
+
+      await loadCategories();
+      resetForm();
+    } catch (error) {
+      console.error('Category save failed:', error);
+    } finally {
+      setLoading(false);
+    }
   };
   // submit handler
 
   const handleEdit = (item) => {
     setEditingId(item.id);
     setForm({ name: item.name, image: item.image });
+    setImageFile(null);
+    setPreview('');
   };
   // edit handler
 
@@ -64,13 +83,26 @@ const CategoryManager = () => {
           required
         />
         <input
-          value={form.image}
-          onChange={(event) => setForm({ ...form, image: event.target.value })}
-          placeholder="Image URL"
-          className="h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) => {
+            const selected = event.target.files?.[0];
+            if (!selected) return;
+            setImageFile(selected);
+            setPreview(URL.createObjectURL(selected));
+          }}
+          className="w-full text-sm"
         />
-        <button type="submit" className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white">
-          {editingId ? 'Update Category' : 'Add Category'}
+        {preview && (
+          <img src={preview} alt="Preview" className="h-28 w-28 rounded-2xl object-cover" />
+        )}
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : editingId ? 'Update Category' : 'Add Category'}
         </button>
       </form>
 

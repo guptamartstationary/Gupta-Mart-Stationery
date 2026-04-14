@@ -10,7 +10,7 @@ const emptyForm = {
   price: '',
   discount: '0',
   stock: '100',
-  unit: 'kg',
+  unit: '',
   customUnit: '',
   image: '',
 };
@@ -183,9 +183,9 @@ const ProductManager = () => {
             onChange={(event) => setForm({ ...form, unit: event.target.value })}
             className="h-11 w-full rounded-2xl border border-slate-200 px-4 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
-            <option value="kg">kg</option>
-            <option value="litre">litre</option>
             <option value="piece">piece</option>
+            <option value="kg">kg</option>
+            <option value="packet">packet</option>
           </select>
           <input
             value={form.customUnit}

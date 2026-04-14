@@ -9,6 +9,8 @@ const BannerManager = () => {
   const [file, setFile] = useState(null);
   const [logoUrl, setLogoUrl] = useState('');
   const [logoSaving, setLogoSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  // added loading
 
   const loadBanners = async () => {
     const data = await bannerApi.getAll();
@@ -48,17 +50,24 @@ const BannerManager = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!file) return;
+    setLoading(true);
 
-    const imageUrl = await uploadImage(file, 'banner-images');
-    await bannerApi.create({
-      title: form.title.trim() || 'Banner',
-      link: form.link.trim() || '/',
-      image: imageUrl,
-    });
+    try {
+      const imageUrl = await uploadImage(file, 'banners');
+      await bannerApi.create({
+        title: form.title.trim() || 'Banner',
+        link: form.link.trim() || '/',
+        image: imageUrl,
+      });
 
-    await loadBanners();
-    setForm(emptyForm);
-    setFile(null);
+      await loadBanners();
+      setForm(emptyForm);
+      setFile(null);
+    } catch (error) {
+      console.error('Banner save failed:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -112,8 +121,12 @@ const BannerManager = () => {
             className="w-full text-sm"
             required
           />
-          <button type="submit" className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white">
-            Add Banner
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Add Banner'}
           </button>
         </form>
       </div>

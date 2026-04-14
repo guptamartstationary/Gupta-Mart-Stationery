@@ -1,7 +1,10 @@
-# TODO: Fix Login.jsx Parse Error
+# Unit Support Update TODO
 
-- [x] Create detailed TODO tracking file for progress
-- [x] Edit aman-store/src/pages/Login.jsx to fix JSX syntax error by wrapping error conditional in parentheses
-- [x] Verify build succeeds (run npm run dev)
-- [x] Test login functionality
-- [x] attempt_completion
+## Pending:
+- [x] Step 1: Edit src/admin/ProductManager.jsx - Update unit select options to piece/kg/packet, emptyForm unit: ''
+- [x] Step 2: Edit src/pages/ProductPage.jsx - Add unit to price displays with fallback
+- [x] Step 3: Verify changes, test form/display, attempt_completion
+
+## Done: 
+
+

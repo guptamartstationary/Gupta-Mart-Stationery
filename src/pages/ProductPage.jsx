@@ -65,9 +65,11 @@ const ProductPage = () => {
             <p className="text-xs uppercase tracking-[0.3em] text-green-600">{product.category}</p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-slate-100">{product.name}</h1>
             <div className="mt-4 flex items-center gap-3">
-              <p className="text-2xl font-semibold text-green-700">{formatCurrency(finalPrice)}</p>
+              <p className="text-2xl font-semibold text-green-700">
+                {formatCurrency(finalPrice)} / {product.unit || ''}
+              </p>
               {product.discount > 0 && (
-                <p className="text-sm text-slate-400 line-through">{formatCurrency(product.price)}</p>
+                <p className="text-sm text-slate-400 line-through">{formatCurrency(product.price)} / {product.unit || ''}</p>
               )}
             </div>
             <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Freshly packed essentials with trusted brands.</p>
