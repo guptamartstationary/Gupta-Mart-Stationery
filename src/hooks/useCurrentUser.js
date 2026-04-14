@@ -35,6 +35,9 @@ const useCurrentUser = () => {
         ...currentUser,
         role: currentUser.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'user'
       } : null;
+      console.log("USER:", userWithRole);
+      console.log("EMAIL:", userWithRole?.email);
+      console.log("IS ADMIN:", userWithRole?.role === 'admin');
       setUser(userWithRole);
       setLoading(false);
       await setProfileForUser(currentUser?.id || null);
@@ -82,6 +85,9 @@ const useCurrentUser = () => {
             ...currentUser,
             role: currentUser.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'user'
           } : null;
+          console.log("USER:", userWithRole);
+          console.log("EMAIL:", userWithRole?.email);
+          console.log("IS ADMIN:", userWithRole?.role === 'admin');
           setSession(null);
           setUser(userWithRole);
           setLoading(false);

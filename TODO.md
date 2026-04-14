@@ -1,10 +1,11 @@
-# Unit Support Update TODO
+# Admin Panel Visibility Fix - Progress Tracker
 
-## Pending:
-- [x] Step 1: Edit src/admin/ProductManager.jsx - Update unit select options to piece/kg/packet, emptyForm unit: ''
-- [x] Step 2: Edit src/pages/ProductPage.jsx - Add unit to price displays with fallback
-- [x] Step 3: Verify changes, test form/display, attempt_completion
+## Plan Breakdown
+- [x] Analyze project files and confirm existing logic (user fetch, ADMIN_EMAIL, admin checks, UI link)
+- [x] Confirm plan with user
+- [x] Step 1: Add debug logs in useCurrentUser.js (two locations: applySessionState and initializeAuth)
+- [ ] Step 2: Test functionality (login as admin, verify console logs and Admin link visibility)
+- [ ] Step 3: Complete task
 
-## Done: 
-
+**Current status**: Debug logs added successfully. Test to verify.
 
