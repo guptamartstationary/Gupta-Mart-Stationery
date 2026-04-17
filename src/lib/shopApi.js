@@ -1,12 +1,11 @@
-﻿import { supabase, hasSupabaseConfig } from './supabaseClient.js';
-import { 
-  createId, readLocal, writeLocal, safeSupabase, 
-  PRODUCT_KEY, CATEGORY_KEY, BANNER_KEY, ORDER_KEY, USER_KEY, 
-  defaultCategories, defaultBanners, fallbackProducts, 
-  userProfilesCache, userProfilesPromiseCache, buildSupabaseProductRow 
+import { supabase } from './supabase';
+import {
+  createId, readLocal, writeLocal, safeSupabase,
+  PRODUCT_KEY, CATEGORY_KEY, BANNER_KEY, ORDER_KEY, USER_KEY,
+  defaultCategories, defaultBanners, fallbackProducts,
+  userProfilesCache, userProfilesPromiseCache, buildSupabaseProductRow
 } from './utils.js';
 
-const useSupabase = hasSupabaseConfig;
 const normalizeProduct = (item = {}) => ({
   id: item.id,
   name: item.name,
@@ -19,12 +18,10 @@ const normalizeProduct = (item = {}) => ({
   unit: item.unit || 'kg',
 });
 
-
-
 const normalizeCategory = (item = {}) => ({
   id: item.id || createId(),
   name: item.name || 'Category',
-  image: item.image || '',
+  image: item.image || item.image_url || '',
 });
 
 const normalizeBanner = (item = {}) => ({
@@ -54,7 +51,6 @@ const normalizeOrder = (item = {}) => {
     created_at: item.created_at || new Date().toISOString(),
   };
 };
-// normalizers
 
 const fileToDataUrl = (file) =>
   new Promise((resolve) => {
@@ -64,93 +60,55 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-/* 
-  DISABLED: OpenFoodFacts external API (for future reuse)
-const fetchOpenFoodFactsProducts = async () => {
-  try {
-    const response = await fetch(
-      'https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=18',
-    );
-    if (!response.ok) return [];
-    const json = await response.json();
-    const items = Array.isArray(json.products) ? json.products : [];
-    return items
-      .map((item, index) => {
-        const name = item.product_name || item.generic_name || 'Kirana Item';
-        const categoryTag = item.categories_tags?.[0]?.split(':').pop();
-        return normalizeProduct({
-          id: item.id || item._id || `off-${index}`,
-          name,
-          price: 40 + (index % 6) * 20,
-          discount: index % 3 === 0 ? 10 : 0,
-          image: item.image_front_url || item.image_url || '',
-          category: categoryTag ? categoryTag.replace(/-/g, ' ') : 'Grocery',
-        });
-      })
-      .filter((item) => item.image && item.name);
-  } catch {
-    return [];
-  }
-};
-*/
-// Open Food Facts fallback
-
 export const uploadImage = async (file, bucket = 'product-images') => {
   if (!file) return '';
-  if (useSupabase && supabase) {
-    const ext = file.name?.split('.').pop() || 'png';
-    const path = `${createId()}.${ext}`;
-    const uploadResult = await safeSupabase(() => supabase.storage.from(bucket).upload(path, file));
-    if (uploadResult?.data) {
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-      return data?.publicUrl || fileToDataUrl(file);
-    }
+  if (!supabase) return fileToDataUrl(file);
+
+  const ext = file.name?.split('.').pop() || 'png';
+  const path = `${createId()}.${ext}`;
+  const uploadResult = await safeSupabase(() => supabase.storage.from(bucket).upload(path, file));
+  if (uploadResult?.data) {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl || fileToDataUrl(file);
   }
+
   return fileToDataUrl(file);
 };
-// file upload
 
 export const productApi = {
   getAll: async () => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('products').select('*').order('created_at', { ascending: false }));
-      console.log('Supabase products response:', supabaseResponse);
-      const data = supabaseResponse?.data;
-      const error = supabaseResponse?.error;
-      if (!error && data?.length) {
-        const products = data.map(normalizeProduct);
-        console.log('Loaded', products.length, 'products from Supabase:', products);
-        return products;
-      }
+    if (!supabase) {
+      const stored = readLocal(PRODUCT_KEY, []);
+      if (stored.length) return stored.map(normalizeProduct);
+      return fallbackProducts.map(normalizeProduct);
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('products').select('*').order('created_at', { ascending: false }));
+    const data = supabaseResponse?.data;
+    const error = supabaseResponse?.error;
+    if (!error && data?.length) {
+      return data.map(normalizeProduct);
     }
 
     const stored = readLocal(PRODUCT_KEY, []);
-    if (stored.length) {
-      console.log('Using LocalStorage products:', stored.length, 'items');
-      return stored.map(normalizeProduct);
-    }
-
-    /* DISABLED: OpenFoodFacts external API fallback
-    const fallback = await fetchOpenFoodFactsProducts();
-    if (fallback.length) {
-      writeLocal(PRODUCT_KEY, fallback);
-      return fallback;
-    }
-    */
-
-    console.log('Using static fallbackProducts:', fallbackProducts.length, 'items');
+    if (stored.length) return stored.map(normalizeProduct);
     return fallbackProducts.map(normalizeProduct);
   },
   create: async (payload) => {
     const product = normalizeProduct(payload);
     const supabasePayload = buildSupabaseProductRow(payload);
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('products').insert([supabasePayload]).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeProduct(data[0]);
-      }
+    if (!supabase) {
+      const stored = readLocal(PRODUCT_KEY, []);
+      const next = [product, ...stored.filter((item) => item.id !== product.id)];
+      writeLocal(PRODUCT_KEY, next);
+      return product;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('products').insert([supabasePayload]).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeProduct(data[0]);
     }
 
     const stored = readLocal(PRODUCT_KEY, []);
@@ -165,12 +123,16 @@ export const productApi = {
     const normalized = normalizeProduct(mergedPayload);
     const supabasePayload = buildSupabaseProductRow(mergedPayload);
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('products').update(supabasePayload).eq('id', id).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeProduct(data[0]);
-      }
+    if (!supabase) {
+      const next = stored.map((item) => (item.id === id ? normalized : item));
+      writeLocal(PRODUCT_KEY, next);
+      return next.find((item) => item.id === id);
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('products').update(supabasePayload).eq('id', id).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeProduct(data[0]);
     }
 
     const next = stored.map((item) => (item.id === id ? normalized : item));
@@ -178,11 +140,16 @@ export const productApi = {
     return next.find((item) => item.id === id);
   },
   remove: async (id) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('products').delete().eq('id', id));
-      if (supabaseResponse?.data) {
-        return true;
-      }
+    if (!supabase) {
+      const stored = readLocal(PRODUCT_KEY, []);
+      const next = stored.filter((item) => item.id !== id);
+      writeLocal(PRODUCT_KEY, next);
+      return true;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('products').delete().eq('id', id));
+    if (supabaseResponse?.data) {
+      return true;
     }
 
     const stored = readLocal(PRODUCT_KEY, []);
@@ -191,35 +158,41 @@ export const productApi = {
     return true;
   },
 };
-// products
 
 export const categoryApi = {
   getAll: async () => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('categories').select('*').order('created_at', { ascending: true }));
-      const data = supabaseResponse?.data;
-      if (data?.length) {
-        return data.map(normalizeCategory);
-      }
+    if (!supabase) {
+      const stored = readLocal(CATEGORY_KEY, []);
+      if (stored.length) return stored.map(normalizeCategory);
+      writeLocal(CATEGORY_KEY, defaultCategories);
+      return defaultCategories;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('categories').select('*').order('created_at', { ascending: true }));
+    const data = supabaseResponse?.data;
+    if (data?.length) {
+      return data.map(normalizeCategory);
     }
 
     const stored = readLocal(CATEGORY_KEY, []);
-    if (stored.length) {
-      return stored.map(normalizeCategory);
-    }
-
+    if (stored.length) return stored.map(normalizeCategory);
     writeLocal(CATEGORY_KEY, defaultCategories);
     return defaultCategories;
   },
   create: async (payload) => {
     const category = normalizeCategory(payload);
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('categories').insert([category]).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeCategory(data[0]);
-      }
+    if (!supabase) {
+      const stored = readLocal(CATEGORY_KEY, []);
+      const next = [category, ...stored.filter((item) => item.id !== category.id)];
+      writeLocal(CATEGORY_KEY, next);
+      return category;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('categories').insert([category]).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeCategory(data[0]);
     }
 
     const stored = readLocal(CATEGORY_KEY, []);
@@ -228,12 +201,17 @@ export const categoryApi = {
     return category;
   },
   update: async (id, updates) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('categories').update(updates).eq('id', id).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeCategory(data[0]);
-      }
+    if (!supabase) {
+      const stored = readLocal(CATEGORY_KEY, []);
+      const next = stored.map((item) => (item.id === id ? normalizeCategory({ ...item, ...updates }) : item));
+      writeLocal(CATEGORY_KEY, next);
+      return next.find((item) => item.id === id);
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('categories').update(updates).eq('id', id).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeCategory(data[0]);
     }
 
     const stored = readLocal(CATEGORY_KEY, []);
@@ -242,11 +220,16 @@ export const categoryApi = {
     return next.find((item) => item.id === id);
   },
   remove: async (id) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('categories').delete().eq('id', id));
-      if (supabaseResponse?.data) {
-        return true;
-      }
+    if (!supabase) {
+      const stored = readLocal(CATEGORY_KEY, []);
+      const next = stored.filter((item) => item.id !== id);
+      writeLocal(CATEGORY_KEY, next);
+      return true;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('categories').delete().eq('id', id));
+    if (supabaseResponse?.data) {
+      return true;
     }
 
     const stored = readLocal(CATEGORY_KEY, []);
@@ -255,35 +238,41 @@ export const categoryApi = {
     return true;
   },
 };
-// categories
 
 export const bannerApi = {
   getAll: async () => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('banners').select('*').order('created_at', { ascending: true }));
-      const data = supabaseResponse?.data;
-      if (data?.length) {
-        return data.map(normalizeBanner);
-      }
+    if (!supabase) {
+      const stored = readLocal(BANNER_KEY, []);
+      if (stored.length) return stored.map(normalizeBanner);
+      writeLocal(BANNER_KEY, defaultBanners);
+      return defaultBanners;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('banners').select('*').order('created_at', { ascending: true }));
+    const data = supabaseResponse?.data;
+    if (data?.length) {
+      return data.map(normalizeBanner);
     }
 
     const stored = readLocal(BANNER_KEY, []);
-    if (stored.length) {
-      return stored.map(normalizeBanner);
-    }
-
+    if (stored.length) return stored.map(normalizeBanner);
     writeLocal(BANNER_KEY, defaultBanners);
     return defaultBanners;
   },
   create: async (payload) => {
     const banner = normalizeBanner(payload);
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('banners').insert([banner]).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeBanner(data[0]);
-      }
+    if (!supabase) {
+      const stored = readLocal(BANNER_KEY, []);
+      const next = [banner, ...stored.filter((item) => item.id !== banner.id)];
+      writeLocal(BANNER_KEY, next);
+      return banner;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('banners').insert([banner]).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeBanner(data[0]);
     }
 
     const stored = readLocal(BANNER_KEY, []);
@@ -292,11 +281,16 @@ export const bannerApi = {
     return banner;
   },
   remove: async (id) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('banners').delete().eq('id', id));
-      if (supabaseResponse?.data) {
-        return true;
-      }
+    if (!supabase) {
+      const stored = readLocal(BANNER_KEY, []);
+      const next = stored.filter((item) => item.id !== id);
+      writeLocal(BANNER_KEY, next);
+      return true;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('banners').delete().eq('id', id));
+    if (supabaseResponse?.data) {
+      return true;
     }
 
     const stored = readLocal(BANNER_KEY, []);
@@ -305,25 +299,28 @@ export const bannerApi = {
     return true;
   },
 };
-// banners
 
 export const ordersApi = {
   create: async (payload) => {
     const order = normalizeOrder(payload);
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('orders').insert([order]).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        // Deduct stock for each item
-        for (const item of payload.items || []) {
-          const product = await productApi.getAll().then(products => products.find(p => p.id === item.id));
-          if (product && product.stock > 0) {
-            await productApi.update(item.id, { stock: Math.max(0, product.stock - item.quantity) });
-          }
+    if (!supabase) {
+      const stored = readLocal(ORDER_KEY, []);
+      const next = [order, ...stored.filter((item) => item.id !== order.id)];
+      writeLocal(ORDER_KEY, next);
+      return order;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('orders').insert([order]).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      for (const item of payload.items || []) {
+        const product = await productApi.getAll().then((products) => products.find((p) => p.id === item.id));
+        if (product && product.stock > 0) {
+          await productApi.update(item.id, { stock: Math.max(0, product.stock - item.quantity) });
         }
-        return normalizeOrder(data[0]);
       }
+      return normalizeOrder(data[0]);
     }
 
     const stored = readLocal(ORDER_KEY, []);
@@ -332,42 +329,48 @@ export const ordersApi = {
     return order;
   },
   getAll: async () => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('orders').select('*').order('created_at', { ascending: false }));
-      const data = supabaseResponse?.data;
-      if (data) {
-        return (data || []).map(normalizeOrder);
-      }
+    if (!supabase) return readLocal(ORDER_KEY, []).map(normalizeOrder);
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('orders').select('*').order('created_at', { ascending: false }));
+    const data = supabaseResponse?.data;
+    if (data) {
+      return data.map(normalizeOrder);
     }
 
     return readLocal(ORDER_KEY, []).map(normalizeOrder);
   },
   getByEmail: async (email) => {
     if (!email) return [];
+    if (!supabase) {
+      return readLocal(ORDER_KEY, []).filter((item) => item.user_email === email).map(normalizeOrder);
+    }
 
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() =>
-        supabase
-          .from('orders')
-          .select('*')
-          .eq('user_email', email)
-          .order('created_at', { ascending: false }),
-      );
-      const data = supabaseResponse?.data;
-      if (data) {
-        return (data || []).map(normalizeOrder);
-      }
+    const supabaseResponse = await safeSupabase(() =>
+      supabase
+        .from('orders')
+        .select('*')
+        .eq('user_email', email)
+        .order('created_at', { ascending: false }),
+    );
+    const data = supabaseResponse?.data;
+    if (data) {
+      return data.map(normalizeOrder);
     }
 
     return readLocal(ORDER_KEY, []).filter((item) => item.user_email === email).map(normalizeOrder);
   },
   updateStatus: async (id, status) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('orders').update({ status }).eq('id', id).select());
-      const data = supabaseResponse?.data;
-      if (data?.[0]) {
-        return normalizeOrder(data[0]);
-      }
+    if (!supabase) {
+      const stored = readLocal(ORDER_KEY, []);
+      const next = stored.map((item) => (item.id === id ? normalizeOrder({ ...item, status }) : item));
+      writeLocal(ORDER_KEY, next);
+      return next.find((item) => item.id === id);
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('orders').update({ status }).eq('id', id).select());
+    const data = supabaseResponse?.data;
+    if (data?.[0]) {
+      return normalizeOrder(data[0]);
     }
 
     const stored = readLocal(ORDER_KEY, []);
@@ -376,11 +379,16 @@ export const ordersApi = {
     return next.find((item) => item.id === id);
   },
   remove: async (id) => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('orders').delete().eq('id', id));
-      if (supabaseResponse?.data) {
-        return true;
-      }
+    if (!supabase) {
+      const stored = readLocal(ORDER_KEY, []);
+      const next = stored.filter((item) => item.id !== id);
+      writeLocal(ORDER_KEY, next);
+      return true;
+    }
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('orders').delete().eq('id', id));
+    if (supabaseResponse?.data) {
+      return true;
     }
 
     const stored = readLocal(ORDER_KEY, []);
@@ -389,21 +397,18 @@ export const ordersApi = {
     return true;
   },
 };
-// orders
 
 export const settingsApi = {
   getAppLogo: async () => {
-    if (useSupabase && supabase) {
-      const supabaseResponse = await safeSupabase(() => supabase.from('settings').select('app_logo').maybeSingle());
-      const data = supabaseResponse?.data;
-      return data?.app_logo || '/Logo/Applogo.png';
-    }
-    return '/Logo/Applogo.png';
+    if (!supabase) return '/Applogo.png';
+
+    const supabaseResponse = await safeSupabase(() => supabase.from('settings').select('app_logo').maybeSingle());
+    const data = supabaseResponse?.data;
+    return data?.app_logo || '/Applogo.png';
   },
   updateAppLogo: async (url) => {
-    if (useSupabase && supabase) {
-      await safeSupabase(() => supabase.from('settings').upsert({ app_logo: url }));
-    }
+    if (!supabase) return;
+    await safeSupabase(() => supabase.from('settings').upsert({ app_logo: url }));
   },
 };
 
@@ -421,17 +426,23 @@ export const usersApi = {
     }
 
     const lookupPromise = (async () => {
-      if (useSupabase && supabase) {
-        const supabaseResponse = await safeSupabase(() =>
-          supabase.from('users').select('*').eq('email', normalizedEmail).limit(1),
-        );
-        const data = supabaseResponse?.data;
-        if (data?.[0]) {
-          const record = data[0];
-          userProfilesCache.set(normalizedEmail, record);
-          userProfilesPromiseCache.delete(normalizedEmail);
-          return record;
-        }
+      if (!supabase) {
+        const stored = readLocal(USER_KEY, []);
+        const match = stored.find((item) => String(item.email).trim().toLowerCase() === normalizedEmail) || null;
+        userProfilesCache.set(normalizedEmail, match);
+        userProfilesPromiseCache.delete(normalizedEmail);
+        return match;
+      }
+
+      const supabaseResponse = await safeSupabase(() =>
+        supabase.from('users').select('*').eq('email', normalizedEmail).limit(1),
+      );
+      const data = supabaseResponse?.data;
+      if (data?.[0]) {
+        const record = data[0];
+        userProfilesCache.set(normalizedEmail, record);
+        userProfilesPromiseCache.delete(normalizedEmail);
+        return record;
       }
 
       const stored = readLocal(USER_KEY, []);
@@ -450,42 +461,55 @@ export const usersApi = {
     const matchField = payload.googleId ? 'googleId' : 'email';
     const matchValue = payload[matchField];
 
-    if (useSupabase && supabase) {
-      const existingResponse = await safeSupabase(() =>
+    if (!supabase) {
+      const normalizedEmail = String(payload?.email || '').trim().toLowerCase();
+      const stored = readLocal(USER_KEY, []);
+      const next = stored.filter((item) =>
+        String(item.email).trim().toLowerCase() !== normalizedEmail &&
+        item.googleId !== payload.googleId
+      );
+      const user = { id: payload.id || createId(), ...payload };
+      writeLocal(USER_KEY, [user, ...next]);
+      if (normalizedEmail) {
+        userProfilesCache.set(normalizedEmail, user);
+      }
+      return user;
+    }
+
+    const existingResponse = await safeSupabase(() =>
+      supabase
+        .from('users')
+        .select('*')
+        .eq(matchField, matchValue)
+        .limit(1),
+    );
+    const existing = existingResponse?.data;
+
+    if (existing?.[0]) {
+      const updateResponse = await safeSupabase(() =>
         supabase
           .from('users')
-          .select('*')
+          .update(payload)
           .eq(matchField, matchValue)
-          .limit(1),
+          .select(),
       );
-      const existing = existingResponse?.data;
-
-      if (existing?.[0]) {
-        const updateResponse = await safeSupabase(() =>
-          supabase
-            .from('users')
-            .update(payload)
-            .eq(matchField, matchValue)
-            .select(),
-        );
-        const data = updateResponse?.data;
-        if (data?.[0]) {
-          userProfilesCache.delete(String(payload.email || '').toLowerCase());
-          return data[0];
-        }
-      } else {
-        const insertResponse = await safeSupabase(() => supabase.from('users').insert([payload]).select());
-        const data = insertResponse?.data;
-        if (data?.[0]) {
-          userProfilesCache.delete(String(payload.email || '').toLowerCase());
-          return data[0];
-        }
+      const data = updateResponse?.data;
+      if (data?.[0]) {
+        userProfilesCache.delete(String(payload.email || '').toLowerCase());
+        return data[0];
+      }
+    } else {
+      const insertResponse = await safeSupabase(() => supabase.from('users').insert([payload]).select());
+      const data = insertResponse?.data;
+      if (data?.[0]) {
+        userProfilesCache.delete(String(payload.email || '').toLowerCase());
+        return data[0];
       }
     }
 
     const normalizedEmail = String(payload?.email || '').trim().toLowerCase();
     const stored = readLocal(USER_KEY, []);
-    const next = stored.filter((item) => 
+    const next = stored.filter((item) =>
       String(item.email).trim().toLowerCase() !== normalizedEmail &&
       item.googleId !== payload.googleId
     );
@@ -496,7 +520,6 @@ export const usersApi = {
     }
     return user;
   },
-
   getByGoogleId: async (googleId) => {
     const id = String(googleId || '').trim();
     if (!id) return null;
@@ -511,17 +534,23 @@ export const usersApi = {
     }
 
     const lookupPromise = (async () => {
-      if (useSupabase && supabase) {
-        const supabaseResponse = await safeSupabase(() =>
-          supabase.from('users').select('*').eq('googleId', id).limit(1),
-        );
-        const data = supabaseResponse?.data;
-        if (data?.[0]) {
-          const record = data[0];
-          userProfilesCache.set(cacheKey, record);
-          userProfilesPromiseCache.delete(cacheKey);
-          return record;
-        }
+      if (!supabase) {
+        const stored = readLocal(USER_KEY, []);
+        const match = stored.find((item) => item.googleId === id) || null;
+        userProfilesCache.set(cacheKey, match);
+        userProfilesPromiseCache.delete(cacheKey);
+        return match;
+      }
+
+      const supabaseResponse = await safeSupabase(() =>
+        supabase.from('users').select('*').eq('googleId', id).limit(1),
+      );
+      const data = supabaseResponse?.data;
+      if (data?.[0]) {
+        const record = data[0];
+        userProfilesCache.set(cacheKey, record);
+        userProfilesPromiseCache.delete(cacheKey);
+        return record;
       }
 
       const stored = readLocal(USER_KEY, []);
@@ -535,4 +564,3 @@ export const usersApi = {
     return lookupPromise;
   },
 };
-// users
