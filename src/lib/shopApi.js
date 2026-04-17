@@ -6,8 +6,7 @@ import {
   userProfilesCache, userProfilesPromiseCache, buildSupabaseProductRow
 } from './utils.js';
 
-
-
+// ---------------- NORMALIZERS ----------------
 const normalizeProduct = (item = {}) => ({
   id: item.id,
   name: item.name,
@@ -36,74 +35,97 @@ const normalizeBanner = (item = {}) => ({
 const normalizeOrder = (item = {}) => ({
   id: item.id || createId(),
   status: item.status || 'pending',
-  items: item.items || [],
-  total_price: Number(item.total_price) || 0,
+  items: item.items || item.products || [],
+  total_price: Number(item.total_price || 0),
   user_email: item.user_email || '',
   created_at: item.created_at || new Date().toISOString(),
 });
 
+// ---------------- IMAGE UPLOAD ----------------
+const fileToDataUrl = (file) =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result || '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
 
+export const uploadImage = async (file, bucket = 'product-images') => {
+  if (!file) return '';
+  if (!supabase) return fileToDataUrl(file);
 
+  const ext = file.name?.split('.').pop() || 'png';
+  const path = `${createId()}.${ext}`;
+
+  const { error } = await supabase.storage.from(bucket).upload(path, file);
+
+  if (!error) {
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data?.publicUrl || '';
+  }
+
+  return fileToDataUrl(file);
+};
+
+// ---------------- PRODUCT API ----------------
 export const productApi = {
   getAll: async () => {
-    if (!supabase) return readLocal(PRODUCT_KEY, []).map(normalizeProduct);
-
-    const { data } = await supabase.from('products').select('*');
+    const { data } = await safeSupabase(() =>
+      supabase.from('products').select('*')
+    );
     return data?.map(normalizeProduct) || [];
   },
 };
 
-
-
+// ---------------- CATEGORY API ----------------
 export const categoryApi = {
   getAll: async () => {
-    if (!supabase) return readLocal(CATEGORY_KEY, []).map(normalizeCategory);
-
-    const { data } = await supabase.from('categories').select('*');
-    return data?.map(normalizeCategory) || [];
+    const { data } = await safeSupabase(() =>
+      supabase.from('categories').select('*')
+    );
+    return data?.map(normalizeCategory) || defaultCategories;
   },
 };
 
+// ---------------- BANNER API ----------------
+export const bannerApi = {
+  getAll: async () => {
+    const { data } = await safeSupabase(() =>
+      supabase.from('banners').select('*')
+    );
+    return data?.map(normalizeBanner) || defaultBanners;
+  },
+};
 
+// ---------------- ORDERS API ----------------
+export const ordersApi = {
+  getAll: async () => {
+    const { data } = await safeSupabase(() =>
+      supabase.from('orders').select('*')
+    );
+    return data?.map(normalizeOrder) || [];
+  },
+};
+
+// ---------------- SETTINGS API ----------------
+export const settingsApi = {
+  getAppLogo: async () => {
+    const { data } = await safeSupabase(() =>
+      supabase.from('settings').select('app_logo').maybeSingle()
+    );
+    return data?.app_logo || '/Applogo.png';
+  },
+};
+
+// ---------------- USERS API ----------------
 export const usersApi = {
   getByEmail: async (email) => {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!normalizedEmail) return null;
+    if (!email) return null;
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .limit(1);
+    const { data } = await safeSupabase(() =>
+      supabase.from('profiles').select('*').eq('email', email).single()
+    );
 
-    return data?.[0] || null;
-  },
-
-  upsert: async (payload) => {
-    if (!payload?.email) return null;
-
-    const { data } = await supabase
-      .from('profiles')
-      .upsert(payload)
-      .select();
-
-    return data?.[0] || null;
-  },
-};
-
-
-
-export const ordersApi = {
-  create: async (payload) => {
-    const order = normalizeOrder(payload);
-
-    if (!supabase) {
-      const stored = readLocal(ORDER_KEY, []);
-      writeLocal(ORDER_KEY, [order, ...stored]);
-      return order;
-    }
-
-    const { data } = await supabase.from('orders').insert([order]).select();
-    return data?.[0] || order;
+    return data || null;
   },
 };
