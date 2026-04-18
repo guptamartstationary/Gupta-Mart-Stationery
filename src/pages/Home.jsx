@@ -26,14 +26,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-white pb-20 dark:bg-slate-950">
-{user ? (
-  <div className="bg-green-50 dark:bg-green-950/50 p-4 rounded-xl border border-green-200 dark:border-green-800 mx-4 lg:mx-0 mb-6">
-    <p className="text-sm text-slate-600 dark:text-slate-300">
-      Logged in as: <strong>{user.email}</strong> | 
-      {user.user_metadata?.name && ` ${user.user_metadata.name}`}
-    </p>
-  </div>
-) : null}
+
 <HeroSlider />
 
       <section className="container-fixed mt-8">
