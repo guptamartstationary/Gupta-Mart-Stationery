@@ -6,15 +6,38 @@ import { FALLBACK_IMAGE, getProductImage } from '../lib/imageUtils.js';
 import { getOrderLocation } from '../lib/location.js';
 import useCurrentUser from '../hooks/useCurrentUser.js';
 import { formatCurrency, getCartTotals, getItemPrice } from '../lib/pricing.js';
+import { readStoredUserProfile } from '../lib/userProfileStorage.js';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, clearCart } = useCartStore();
-  const { user } = useCurrentUser();
-  const [profile, setProfile] = useState(null);
+  const { user, profile: remoteProfile } = useCurrentUser();
+  const [profileTick, setProfileTick] = useState(0);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState('');
   // data hooks
+
+  useEffect(() => {
+    const bump = () => setProfileTick((n) => n + 1);
+    window.addEventListener('userprofile:updated', bump);
+    window.addEventListener('storage', bump);
+    return () => {
+      window.removeEventListener('userprofile:updated', bump);
+      window.removeEventListener('storage', bump);
+    };
+  }, []);
+
+  const profile = useMemo(() => {
+    void profileTick;
+    const local = readStoredUserProfile();
+    const name = String(remoteProfile?.name || local?.name || '').trim();
+    const phone = String(remoteProfile?.phone || local?.phone || '').trim();
+    const address = String(remoteProfile?.address || local?.address || '').trim();
+    const lat = local?.lat ?? remoteProfile?.lat ?? null;
+    const lng = local?.lng ?? remoteProfile?.lng ?? null;
+    if (!name || !phone || !address) return null;
+    return { name, phone, address, lat, lng };
+  }, [remoteProfile, profileTick]);
 
   const deliveryFeeAmount = Number(import.meta.env.VITE_DELIVERY_FEE ?? 20);
   const { subtotal, deliveryFee, total } = useMemo(
@@ -32,20 +55,6 @@ const Cart = () => {
     [cart],
   );
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('userProfile');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.name && parsed.phone && parsed.address) {
-          setProfile(parsed);
-        }
-      }
-    } catch {
-      // invalid JSON, ignore
-    }
-  }, []);
-
   const handlePlaceOrder = async () => {
     setValidationError('');
     setStatus('');
@@ -59,7 +68,7 @@ const Cart = () => {
       return;
     }
     if (!isProfileComplete) {
-      setValidationError('Please update your profile to place orders.');
+      setValidationError('Delivery details missing — Account page par ek baar save kar lo.');
       return;
     }
     if (unavailableItems.length) {
@@ -221,9 +230,18 @@ const Cart = () => {
                   )}
                   {!isProfileComplete && (
                     <div className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
-                      Please update your profile to place orders. 
-                      <Link to="/account" className="font-semibold underline">Update Profile →</Link>
+                      Delivery address save karein — phir har order par dubara type nahi karna padega.
+                      <Link to="/account" className="mt-2 inline-block font-semibold text-green-700 underline dark:text-green-400">
+                        Account par save karein →
+                      </Link>
                     </div>
+                  )}
+                  {isProfileComplete && (
+                    <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+                      Delivering to: <span className="font-medium text-slate-700 dark:text-slate-300">{profile.name}</span>
+                      {' · '}
+                      {profile.phone.replace(/\D/g, '').slice(0, 10)}
+                    </p>
                   )}
                   <button
                     type="button"

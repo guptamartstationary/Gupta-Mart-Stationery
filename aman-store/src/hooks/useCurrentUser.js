@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 import { getProfile } from "../lib/auth.js";
 
@@ -24,6 +24,23 @@ const useCurrentUser = () => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const authUserRef = useRef(null);
+
+  const refreshProfile = useCallback(async () => {
+    const currentUser = authUserRef.current;
+    if (!currentUser || !supabase) return;
+    try {
+      const nextProfile = await getProfile(currentUser.id);
+      const email = currentUser.email || '';
+      const isAdmin =
+        nextProfile?.role === 'admin' || email === 'guptamartstationary911@gmail.com';
+      const role = isAdmin ? 'admin' : nextProfile?.role || 'user';
+      setProfile(nextProfile);
+      setUser({ ...currentUser, role, isAdmin });
+    } catch {
+      // keep existing profile
+    }
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -49,6 +66,7 @@ const useCurrentUser = () => {
     const applySessionState = async (nextSession) => {
       if (!isActive) return;
       const currentUser = nextSession?.user || null;
+      authUserRef.current = currentUser;
       setSession(nextSession || null);
       const { nextUser, nextProfile } = await buildUserState(currentUser);
       if (!isActive) return;
@@ -58,6 +76,7 @@ const useCurrentUser = () => {
     };
 
     if (!supabase) {
+      authUserRef.current = null;
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -89,6 +108,7 @@ const useCurrentUser = () => {
       async (event, nextSession) => {
         if (!isActive) return;
         if (event === 'SIGNED_OUT') {
+          authUserRef.current = null;
           setSession(null);
           setUser(null);
           setProfile(null);
@@ -111,7 +131,8 @@ const useCurrentUser = () => {
     session,
     profile,
     loading,
-    isAdmin: user?.isAdmin ?? false
+    isAdmin: user?.isAdmin ?? false,
+    refreshProfile,
   };
 };
 

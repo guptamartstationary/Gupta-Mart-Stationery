@@ -23,6 +23,12 @@
 
 - Zustand `persist` + versioned migration (`cartStore.js`). Badge shows **sum of line quantities** (Navbar + BottomNav).
 
+## Delivery profile (Account / checkout)
+
+- `localStorage` key `userProfile` + Supabase `profiles` row (`userProfileStorage.js`, `Account.jsx`).
+- After save, app dispatches `userprofile:updated` so **Cart** picks up merged delivery details without reload.
+- `useCurrentUser` exposes **`refreshProfile()`** after server upsert.
+
 ## PWA
 
 - `vite-plugin-pwa` generates `sw.js`. If users see stale assets after deploy, purge CDN / clear site data once.
