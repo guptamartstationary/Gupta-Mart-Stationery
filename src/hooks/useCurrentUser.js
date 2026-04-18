@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { getProfile } from "../lib/auth.js";
 
-const AUTH_BOOTSTRAP_TIMEOUT_MS = 10000;
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 5000;
 
 const useCurrentUser = () => {
   const [user, setUser] = useState(null);
