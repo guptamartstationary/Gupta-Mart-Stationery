@@ -10,9 +10,7 @@ import { formatCurrency, getItemPrice } from '../lib/pricing.js';
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCartStore();
   const { user } = useCurrentUser();
-  const [phone, setPhone] = useState('');
-  const [deliveryName, setDeliveryName] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   // data hooks
@@ -22,31 +20,39 @@ const Cart = () => {
   const total = subtotal + deliveryFee;
   // totals
 
+  const isProfileComplete = profile && 
+    profile.name && profile.name.trim() && 
+    profile.phone && profile.phone.replace(/\D/g, '').length === 10 && 
+    profile.address && profile.address.trim();
+
   useEffect(() => {
-    const initialPhone = String(user?.mobile || user?.phone || '')
-      .replace(/\D/g, '')
-      .slice(0, 10);
-    setPhone(initialPhone);
-    setDeliveryName(user?.name || user?.displayName || '');
-  }, [user]);
-  // prefill phone
+    try {
+      const stored = localStorage.getItem('userProfile');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.name && parsed.phone && parsed.address) {
+          setProfile(parsed);
+        }
+      }
+    } catch {
+      // invalid JSON, ignore
+    }
+  }, []);
 
   const handlePlaceOrder = async () => {
-    if (!cart.length || !user?.email) return;
-
-    const phoneDigits = phone.replace(/\D/g, '').slice(0, 10);
-    if (phoneDigits.length !== 10 || !deliveryName.trim() || !deliveryAddress.trim()) {
-      setStatus('Fill name, valid phone, and address.');
+    if (!cart.length || !user?.email || !isProfileComplete) {
+      setStatus('Please update your profile');
       return;
     }
+
+    const phoneDigits = profile.phone.replace(/\D/g, '').slice(0, 10);
 
     setLoading(true);
     setStatus('');
 
     try {
       const location = await getOrderLocation();
-      const locationAddress = location.address || user?.address || '';
-
+      
       await ordersApi.create({
         status: 'pending',
         items: cart.map((item) => ({
@@ -58,15 +64,15 @@ const Cart = () => {
         subtotal,
         delivery_fee: deliveryFee,
         total_price: total,
-        delivery_name: deliveryName.trim(),
+        delivery_name: profile.name.trim(),
         delivery_phone: phoneDigits,
-        delivery_address: deliveryAddress.trim(),
+        delivery_address: profile.address.trim(),
         user_name: user?.name || user?.displayName || '',
         user_mobile: phoneDigits,
-        user_address: user?.address || '',
-        lat: location.lat,
-        lng: location.lng,
-        address: locationAddress,
+        user_address: profile.address.trim(),
+        lat: profile.lat || location.lat,
+        lng: profile.lng || location.lng,
+        address: location.address || profile.address || user?.address || '',
         user_email: user?.email || '',
       });
 
@@ -181,48 +187,28 @@ const Cart = () => {
                 </Link>
               ) : (
                 <>
-                  <label className="mt-6 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Phone Number
-                    <input
-                      value={phone}
-                      onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
-                      inputMode="numeric"
-                      maxLength={10}
-                      placeholder="10 digit phone number"
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-green-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                    />
-                  </label>
-                  <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Delivery Name
-                    <input
-                      value={deliveryName}
-                      onChange={(event) => setDeliveryName(event.target.value)}
-                      placeholder="Full name"
-                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-green-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                    />
-                  </label>
-                  <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Delivery Address
-                    <textarea
-                      value={deliveryAddress}
-                      onChange={(event) => setDeliveryAddress(event.target.value)}
-                      placeholder="Full address (street, landmark, city, pin)"
-                      rows="3"
-                      className="mt-2 h-auto w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-green-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 resize-none"
-                    />
-                  </label>
+                  {!isProfileComplete && (
+                    <div className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+                      Please update your profile to place orders. 
+                      <Link to="/account" className="font-semibold underline">Update Profile →</Link>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handlePlaceOrder}
-                    disabled={loading}
-                    className="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                    disabled={loading || !isProfileComplete}
+                    className="mt-6 w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
                   >
                     {loading ? 'Placing order...' : 'Place Order'}
                   </button>
                 </>
               )}
 
-              {status && <p className="mt-4 text-sm text-green-600">{status}</p>}
+              {status && (
+                <p className={`mt-4 text-sm ${status.includes('successfully') || status.includes('update') ? 'text-green-600' : 'text-red-600'}`}>
+                  {status}
+                </p>
+              )}
             </aside>
           </div>
         )}
@@ -230,6 +216,6 @@ const Cart = () => {
     </div>
   );
 };
-// page
 
 export default Cart;
+

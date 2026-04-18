@@ -1,10 +1,13 @@
 import { supabase } from './supabase';
+import { hasSupabaseConfig } from './supabaseClient.js';
 import {
   createId, readLocal, writeLocal, safeSupabase,
   PRODUCT_KEY, CATEGORY_KEY, BANNER_KEY, ORDER_KEY, USER_KEY,
   defaultCategories, defaultBanners, fallbackProducts,
   userProfilesCache, userProfilesPromiseCache, buildSupabaseProductRow
 } from './utils.js';
+
+const useSupabase = hasSupabaseConfig;
 
 const normalizeProduct = (item = {}) => ({
   id: item.id,

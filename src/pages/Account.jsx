@@ -4,7 +4,7 @@ import useCurrentUser from '../hooks/useCurrentUser.js';
 import { supabase } from '../lib/supabase.js';
 
 const Account = () => {
-  const { user } = useCurrentUser();
+  const { user, profile, loading } = useCurrentUser();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -15,13 +15,12 @@ const Account = () => {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const profile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-    if (profile.name) setName(profile.name);
-    if (profile.phone) setPhone(profile.phone);
-    if (profile.address) setAddress(profile.address);
-    if (profile.lat) setLat(profile.lat);
-    if (profile.lng) setLng(profile.lng);
-  }, []);
+    if (loading || !user) return;
+    setName(profile?.name || user.name || '');
+    setPhone(profile?.phone || user.phone || '');
+    setAddress(profile?.address || user.address || '');
+    // lat/lng not in profile, keep manual
+  }, [user, profile, loading]);
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -50,10 +49,33 @@ const Account = () => {
     );
   };
 
-  const handleSave = () => {
-    localStorage.setItem('userProfile', JSON.stringify({ name, phone, address, lat, lng }));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    try {
+      // Save to localStorage fallback
+      localStorage.setItem('userProfile', JSON.stringify({ name, phone, address, lat, lng }));
+      
+      // Save to Supabase
+      if (user && supabase) {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert([{ 
+            id: user.id, 
+            name, 
+            phone, 
+            address,
+            updated_at: new Date().toISOString()
+          }]);
+        if (error) throw error;
+      }
+      
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Save error:', error);
+      // Still save local fallback
+      localStorage.setItem('userProfile', JSON.stringify({ name, phone, address, lat, lng }));
+      alert('Local save succeeded, Supabase save failed. Check console.');
+    }
   };
 
   const handleLogout = async () => {

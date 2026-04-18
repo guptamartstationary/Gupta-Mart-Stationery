@@ -1,27 +1,11 @@
-# Supabase Auth Fix Complete - aman-store ✅
+# TODO.md - BLACKBOXAI Fix Plan for Auth/Profile Issues
 
-**All code changes applied:**
+## Steps:
 
-1. ✅ **auth.js**: Auto-creates profile on login, debug logs [AUTH]
-2. ✅ **shopApi.js**: usersApi uses 'profiles' table (matches auth)
-3. ✅ **useCurrentUser.js**: Session/profile logs [HOOK]
-4. ✅ **AdminLogin.jsx**: Enhanced error handling + logs [ADMIN_LOGIN]
+- [ ] Step 1: Edit src/lib/shopApi.js - Add import { hasSupabaseConfig } from './supabaseClient.js'; and const useSupabase = hasSupabaseConfig; after imports
+- [x] Step 1: Edit src/lib/shopApi.js - Add import { hasSupabaseConfig } from './supabaseClient.js'; and const useSupabase = hasSupabaseConfig; after imports
+- [x] Step 2: Edit src/pages/Account.jsx - Load form from useCurrentUser() hook data (user/profile), save to both Supabase profiles table and localStorage
+- [ ] Step 3: Add RLS policies to profiles table in Supabase dashboard (SQL provided)
+- [ ] Step 4: Test - cd aman-store && npm run dev, login, go to /account, save profile, check no 406 errors
 
-**Debug instructions:**
-```
-cd aman-store && npm run dev
-```
-1. Login at /admin/login
-2. Check console: [AUTH], [HOOK], [ADMIN_LOGIN] logs
-3. Verify localStorage 'sb-[project]-auth-token'
-4. Page refresh → session persists
-5. Admin email must have role='admin' in Supabase profiles table
-
-**Expected:** No AuthSessionMissingError, user.email defined, isAdmin works.
-
-**Supabase setup needed:** 
-- profiles table: columns id, email, role
-- RLS: SELECT/UPDATE where id=auth.uid()
-- Test admin: INSERT profiles (id='uuid', email='admin@...', role='admin')
-
-Task complete. Run dev server to test.
+**Progress: Completed Step 1 (shopApi.js). Step 2 Account.jsx partially edited (hook destructure, useEffect, handleSave). Finalizing loading + Supabase upsert. Then Step 3.**
