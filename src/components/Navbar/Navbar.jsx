@@ -79,7 +79,7 @@ const Navbar = () => {
         </Link>
 
         {/* Search — full width on mobile, flex-1 on desktop */}
-        <div className="order-3 w-full md:order-none md:flex-1">
+        <div className="order-3 w-full md:order-0 md:flex-1">
           <SearchBar className="w-full" />
         </div>
 
