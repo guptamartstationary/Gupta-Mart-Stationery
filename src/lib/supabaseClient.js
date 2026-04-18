@@ -11,8 +11,8 @@ export const supabase = hasSupabaseConfig
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        cookies: true,
+        storageKey: 'gupta-mart-auth',
+        storage: window.localStorage,
       },
     })
   : null;
-
