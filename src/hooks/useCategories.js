@@ -1,18 +1,33 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import { categoryApi } from '../lib/shopApi.js';
 
-const useCategories = () => {
+const useCategories = (user, userLoading) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  // state
 
   const refresh = useCallback(async () => {
+    // ⛔ wait for auth
+    if (userLoading) return;
+
+    // ⛔ user nahi hai → clear data
+    if (!user) {
+      setCategories([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    const data = await categoryApi.getAll();
-    setCategories(data || []);
+
+    try {
+      const data = await categoryApi.getAll();
+      setCategories(data || []);
+    } catch (err) {
+      console.log("CATEGORY ERROR:", err);
+      setCategories([]);
+    }
+
     setLoading(false);
-  }, []);
-  // actions
+  }, [user, userLoading]);
 
   useEffect(() => {
     refresh();
@@ -20,6 +35,5 @@ const useCategories = () => {
 
   return { categories, loading, refresh };
 };
-// hook
 
 export default useCategories;
