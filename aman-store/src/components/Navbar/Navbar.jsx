@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Moon, ShoppingCart, Sun } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore.js';
@@ -11,6 +11,11 @@ import SearchBar from '../SearchBar.jsx';
 const Navbar = () => {
   const navigate = useNavigate();
   const { cart } = useCartStore();
+  const cartItemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
+    [cart],
+  );
+  const cartBadgeLabel = cartItemCount > 99 ? '99+' : String(cartItemCount);
   const { user, loading: authLoading } = useCurrentUser();
   const logoStore = useLogoStore();
   const { logo } = logoStore;
@@ -86,11 +91,12 @@ const Navbar = () => {
           <Link
             to="/cart"
             className="relative hidden md:inline-flex rounded-xl bg-slate-100 p-2 text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200"
+            aria-label={cartItemCount > 0 ? `Cart, ${cartItemCount} items` : 'Cart'}
           >
             <ShoppingCart className="h-5 w-5" />
-            {cart.length > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-green-600 text-[10px] font-semibold text-white">
-                {cart.length}
+            {cartItemCount > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex min-h-4.5 min-w-4.5 items-center justify-center rounded-full bg-green-600 px-1 text-[10px] font-semibold leading-none text-white">
+                {cartBadgeLabel}
               </span>
             )}
           </Link>

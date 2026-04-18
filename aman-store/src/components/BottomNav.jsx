@@ -1,9 +1,17 @@
-﻿import { NavLink } from 'react-router-dom';
+﻿import { useMemo } from 'react';
+import { NavLink } from 'react-router-dom';
 import { Home, Search, ShoppingCart, ClipboardList, Shield } from 'lucide-react';
 import useCurrentUser from '../hooks/useCurrentUser.js';
+import { useCartStore } from '../store/cartStore.js';
 
 const BottomNav = () => {
   const { user } = useCurrentUser();
+  const cart = useCartStore((s) => s.cart);
+  const cartItemCount = useMemo(
+    () => cart.reduce((sum, item) => sum + (item.quantity || 1), 0),
+    [cart],
+  );
+  const cartBadgeLabel = cartItemCount > 99 ? '99+' : String(cartItemCount);
 
   const navItems = [
     { to: '/', label: 'Home', icon: Home },
@@ -24,10 +32,12 @@ const BottomNav = () => {
       <div className={`grid ${columns} gap-2 px-4 py-2`}>
         {navItems.map((item) => {
           const Icon = item.icon;
+          const showCartBadge = item.to === '/cart' && cartItemCount > 0;
           return (
             <NavLink
               key={item.to}
               to={item.to}
+              aria-label={item.to === '/cart' && cartItemCount > 0 ? `Cart, ${cartItemCount} items` : item.label}
               className={({ isActive }) =>
                 `flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-semibold ${
                   isActive
@@ -36,7 +46,14 @@ const BottomNav = () => {
                 }`
               }
             >
-              <Icon className="h-5 w-5" />
+              <span className="relative inline-flex">
+                <Icon className="h-5 w-5" />
+                {showCartBadge && (
+                  <span className="absolute -right-2 -top-1 inline-flex min-h-3.5 min-w-3.5 items-center justify-center rounded-full bg-green-600 px-0.5 text-[9px] font-bold leading-none text-white">
+                    {cartBadgeLabel}
+                  </span>
+                )}
+              </span>
               {item.label}
             </NavLink>
           );
