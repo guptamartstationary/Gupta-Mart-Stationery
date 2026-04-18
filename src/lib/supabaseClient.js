@@ -11,8 +11,7 @@ export const supabase = hasSupabaseConfig
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: "sb-gupta-mart-auth",
-        storage: typeof window !== "undefined" ? window.localStorage : undefined,
+        // ✅ Custom storageKey hatao - default use karo
       },
     })
   : null;
