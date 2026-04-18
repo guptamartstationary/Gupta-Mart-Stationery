@@ -5,9 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), VitePWA({
-    registerType: 'autoUpdate',
-    devOptions: { enabled: true },
+    registerType: 'prompt',          // ✅ autoUpdate → prompt
+    devOptions: { enabled: false },  // ✅ dev mein disable
     manifestFilename: 'manifest.webmanifest',
+    workbox: {
+      navigateFallback: null,        // ✅ navigation intercept band
+      navigateFallbackDenylist: [/^\/api/, /^\/auth/],
+      runtimeCaching: [],            // ✅ no aggressive caching
+    },
     includeAssets: ['Applogo.png', '180.png', 'pwa-192x192.png', 'pwa-512x512.png'],
     manifest: {
       name: 'Gupta Mart & Stationery',
@@ -35,5 +40,5 @@ export default defineConfig({
         }
       ]
     }
-  }) ],
+  })],
 })
