@@ -1,17 +1,24 @@
-# BLACKBOXAI Task Progress: Categories Policy & Storage Fixes
+# PWA Manifest Fix - Execution Plan
 
-Status: In Progress
+**Status:** In Progress
 
-## Approved Plan Steps:
-- [x] Step 1: Create TODO.md ✅
-- [x] Step 2: Update supabase-schema.sql with categories table + RLS policies ✅
-- [x] Step 3: Add storage.objects policies (SQL comments for user) ✅
-- [x] Step 4: User runs SQL in Supabase dashboard ✅
-- [ ] Step 5: Test categories fetch on Home page (`npm run dev`)
-- [ ] Step 6: Test admin category upload/create
-- [ ] Step 7: Verify session persistence (login/refresh)
-- [ ] Step 8: Re-test APIs, attempt_completion
+## Steps from Approved Plan:
 
-**Next**: Run `npm run dev` in aman-store → Test Step 5-8 (Home categories, admin upload, session refresh/login).
+### 1. Verify local build generates manifest [ ]
+- cd aman-store && npm run build
+- Check dist/manifest.webmanifest exists + assets
 
-**Notes**: No frontend code changes. Session already persists (persistSession: true).
+### 2. Clean Windows reinstall deps if needed [ ]
+- rmdir /s node_modules && del package-lock.json && npm i
+
+### 3. Test PWA locally [ ]
+- npm run preview
+- Chrome DevTools > Application > Manifest (validate)
+
+### 4. Update TODO-manifest-fix.md to complete [ ]
+
+### 5. Final verification [ ]
+- Build success, PWA installable
+- Ready for deploy test
+
+**Notes:** Local build-log.txt shows success. Focus on verification/testing.
