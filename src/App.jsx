@@ -21,11 +21,14 @@ const AdminBanners = lazy(() => import('./pages/AdminBanners.jsx'));
 const AdminOrders = lazy(() => import('./pages/AdminOrders.jsx'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin.jsx'));
 
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, loading } = useCurrentUser();
-
+// ✅ user/loading props se lega - khud hook call nahi karega
+const ProtectedRoute = ({ children, requireAdmin = false, user, loading }) => {
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 dark:text-slate-200">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 dark:text-slate-200">
+        Loading...
+      </div>
+    );
   }
 
   if (!user) {
@@ -40,27 +43,70 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 };
 
 const App = () => {
+  // ✅ Sirf ek baar - top level pe hook call
+  const { user, loading } = useCurrentUser();
+
   return (
     <Router>
       <Navbar />
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 dark:text-slate-200">Loading...</div>}>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950 dark:text-slate-200">
+          Loading...
+        </div>
+      }>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/category/:name" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ProductPage />} />
           <Route path="/search" element={<MobileSearchPage />} />
           <Route path="/search-results" element={<SearchResultsPage />} />
-          <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
-          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+          <Route path="/cart" element={
+            <ProtectedRoute user={user} loading={loading}>
+              <Cart />
+            </ProtectedRoute>
+          } />
+          <Route path="/orders" element={
+            <ProtectedRoute user={user} loading={loading}>
+              <Orders />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute user={user} loading={loading}>
+              <Orders />
+            </ProtectedRoute>
+          } />
+          <Route path="/account" element={
+            <ProtectedRoute user={user} loading={loading}>
+              <Account />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/products" element={<ProtectedRoute requireAdmin><AdminProducts /></ProtectedRoute>} />
-          <Route path="/admin/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
-          <Route path="/admin/banners" element={<ProtectedRoute requireAdmin><AdminBanners /></ProtectedRoute>} />
-          <Route path="/admin/orders" element={<ProtectedRoute requireAdmin><AdminOrders /></ProtectedRoute>} />
+          <Route path="/admin" element={
+            <ProtectedRoute user={user} loading={loading} requireAdmin>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/products" element={
+            <ProtectedRoute user={user} loading={loading} requireAdmin>
+              <AdminProducts />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/categories" element={
+            <ProtectedRoute user={user} loading={loading} requireAdmin>
+              <AdminCategories />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/banners" element={
+            <ProtectedRoute user={user} loading={loading} requireAdmin>
+              <AdminBanners />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/orders" element={
+            <ProtectedRoute user={user} loading={loading} requireAdmin>
+              <AdminOrders />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
