@@ -9,6 +9,21 @@ import {
 
 const useSupabase = hasSupabaseConfig;
 
+/** One in-flight list read per key so Home + Admin + hooks don't stack duplicate heavy queries. */
+const inFlightListReads = new Map();
+const runDedupedListRead = (key, task) => {
+  if (inFlightListReads.has(key)) return inFlightListReads.get(key);
+  const promise = (async () => {
+    try {
+      return await task();
+    } finally {
+      inFlightListReads.delete(key);
+    }
+  })();
+  inFlightListReads.set(key, promise);
+  return promise;
+};
+
 const normalizeProduct = (item = {}) => ({
   id: item.id,
   name: item.name,
@@ -82,7 +97,9 @@ export const productApi = {
       if (stored.length) return stored.map(normalizeProduct);
       return fallbackProducts.map(normalizeProduct);
     }
-    const response = await safeSupabase(() => supabase.from('products').select('*').order('created_at', { ascending: false }));
+    const response = await runDedupedListRead('products:list', () =>
+      safeSupabase(() => supabase.from('products').select('*').order('created_at', { ascending: false })),
+    );
     return response?.data?.map(normalizeProduct) || fallbackProducts.map(normalizeProduct);
   },
   create: async (payload) => {
@@ -131,7 +148,9 @@ export const categoryApi = {
       writeLocal(CATEGORY_KEY, defaultCategories);
       return defaultCategories;
     }
-    const response = await safeSupabase(() => supabase.from('categories').select('*').order('created_at', { ascending: true }));
+    const response = await runDedupedListRead('categories:list', () =>
+      safeSupabase(() => supabase.from('categories').select('*').order('created_at', { ascending: true })),
+    );
     return response?.data?.map(normalizeCategory) || defaultCategories;
   },
   create: async (payload) => {
@@ -175,7 +194,9 @@ export const bannerApi = {
       writeLocal(BANNER_KEY, defaultBanners);
       return defaultBanners;
     }
-    const response = await safeSupabase(() => supabase.from('banners').select('*').order('created_at', { ascending: true }));
+    const response = await runDedupedListRead('banners:list', () =>
+      safeSupabase(() => supabase.from('banners').select('*').order('created_at', { ascending: true })),
+    );
     return response?.data?.map(normalizeBanner) || defaultBanners;
   },
   create: async (payload) => {
@@ -224,7 +245,9 @@ export const ordersApi = {
   },
   getAll: async () => {
     if (!supabase) return readLocal(ORDER_KEY, []).map(normalizeOrder);
-    const response = await safeSupabase(() => supabase.from('orders').select('*').order('created_at', { ascending: false }));
+    const response = await runDedupedListRead('orders:list', () =>
+      safeSupabase(() => supabase.from('orders').select('*').order('created_at', { ascending: false })),
+    );
     return response?.data?.map(normalizeOrder) || [];
   },
   getByEmail: async (email) => {

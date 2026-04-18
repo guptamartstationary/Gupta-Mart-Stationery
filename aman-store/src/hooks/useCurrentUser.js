@@ -2,6 +2,15 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 import { getProfile } from "../lib/auth.js";
 
+const stripOAuthHashFromUrl = () => {
+  if (typeof window === "undefined") return;
+  const h = window.location.hash;
+  if (!h) return;
+  if (!h.includes("access_token") && !h.includes("refresh_token") && !h.includes("error=")) return;
+  const next = `${window.location.pathname}${window.location.search}`;
+  window.history.replaceState(window.history.state, "", next);
+};
+
 const useCurrentUser = () => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -52,6 +61,7 @@ const useCurrentUser = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         await applySessionState(session);
+        if (session) stripOAuthHashFromUrl();
       } catch {
         if (!isActive) return;
         setSession(null);
@@ -73,6 +83,7 @@ const useCurrentUser = () => {
           setLoading(false);
         } else {
           await applySessionState(nextSession);
+          if (nextSession) stripOAuthHashFromUrl();
         }
       }
     );

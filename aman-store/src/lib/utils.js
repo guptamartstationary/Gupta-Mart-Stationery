@@ -28,11 +28,20 @@ const withTimeout = async (promise, ms, message = 'Request timed out') => {
   }
 };
 
+const supabaseTimeoutMs = () => {
+  const raw = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_SUPABASE_TIMEOUT_MS : undefined;
+  const n = Number(raw);
+  if (Number.isFinite(n) && n >= 3000) return Math.min(n, 120000);
+  return 12000;
+};
+
 export const safeSupabase = async (fn) => {
   try {
-    return await withTimeout(Promise.resolve().then(fn), 5000, 'Supabase request timed out');
+    return await withTimeout(Promise.resolve().then(fn), supabaseTimeoutMs(), 'Supabase request timed out');
   } catch (error) {
-    console.error('Supabase error:', error);
+    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+      console.error('Supabase error:', error);
+    }
     return { data: null, error };
   }
 };
